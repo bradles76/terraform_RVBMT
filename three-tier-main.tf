@@ -140,9 +140,10 @@ resource "aws_instance" "webserver1" {
   vpc_security_group_ids = [aws_security_group.webserver-sg.id]
   subnet_id              = aws_subnet.web-subnet-1.id
   user_data              = file("install_apache.sh")
+  key_name               = "TenableAB"
 
   tags = {
-    Name = "Web Server"
+    Name = "Web Server 1"
   }
 
 }
@@ -154,9 +155,10 @@ resource "aws_instance" "webserver2" {
   vpc_security_group_ids = [aws_security_group.webserver-sg.id]
   subnet_id              = aws_subnet.web-subnet-2.id
   user_data              = file("install_apache.sh")
+  key_name               = "TenableAB"
 
   tags = {
-    Name = "Web Server"
+    Name = "Web Server 2"
   }
 
 }
