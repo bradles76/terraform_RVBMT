@@ -140,7 +140,6 @@ resource "aws_instance" "webserver1" {
   vpc_security_group_ids = [aws_security_group.webserver-sg.id]
   subnet_id              = aws_subnet.web-subnet-1.id
   user_data              = file("install_apache.sh")
-  key_name               = "TenableAB"
 
   tags = {
     Name = "Web Server 1"
@@ -155,7 +154,6 @@ resource "aws_instance" "webserver2" {
   vpc_security_group_ids = [aws_security_group.webserver-sg.id]
   subnet_id              = aws_subnet.web-subnet-2.id
   user_data              = file("install_apache.sh")
-  key_name               = "TenableAB"
 
   tags = {
     Name = "Web Server 2"
@@ -295,7 +293,7 @@ resource "aws_db_instance" "default" {
   instance_class         = "db.t2.micro"
   multi_az               = true
   name                   = "mydb"
-  username               = "adam"
+  username               = "admin"
   password               = "password123"
   skip_final_snapshot    = true
   vpc_security_group_ids = [aws_security_group.database-sg.id]
