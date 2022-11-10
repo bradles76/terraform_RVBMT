@@ -25,7 +25,7 @@ resource "aws_subnet" "web-subnet-1" {
   vpc_id                  = aws_vpc.my-vpc.id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = "ap-southeast-2a"
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
   tags = {
     Name = "Web-1a"
@@ -36,7 +36,7 @@ resource "aws_subnet" "web-subnet-2" {
   vpc_id                  = aws_vpc.my-vpc.id
   cidr_block              = "10.0.2.0/24"
   availability_zone       = "ap-southeast-2b"
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
   tags = {
     Name = "Web-2b"
@@ -145,6 +145,7 @@ resource "aws_instance" "webserver1" {
     Name = "Web Server 1"
   }
 
+  monitoring = true
 }
 
 resource "aws_instance" "webserver2" {
@@ -159,6 +160,7 @@ resource "aws_instance" "webserver2" {
     Name = "Web Server 2"
   }
 
+  monitoring = true
 }
 
 # Create Web Security Group
@@ -172,7 +174,7 @@ resource "aws_security_group" "web-sg" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["<cidr>"]
   }
 
   egress {
@@ -250,7 +252,7 @@ resource "aws_lb" "external-elb" {
 resource "aws_lb_target_group" "external-elb" {
   name     = "ALB-TG"
   port     = 80
-  protocol = "HTTP"
+  protocol = "HTTPS"
   vpc_id   = aws_vpc.my-vpc.id
 }
 
@@ -277,7 +279,7 @@ resource "aws_lb_target_group_attachment" "external-elb2" {
 resource "aws_lb_listener" "external-elb" {
   load_balancer_arn = aws_lb.external-elb.arn
   port              = "80"
-  protocol          = "HTTP"
+  protocol          = "HTTPS"
 
   default_action {
     type             = "forward"
@@ -286,7 +288,7 @@ resource "aws_lb_listener" "external-elb" {
 }
 
 resource "aws_db_instance" "default" {
-  allocated_storage      = 10
+  allocated_storage      = 200
   db_subnet_group_name   = aws_db_subnet_group.default.id
   engine                 = "mysql"
   engine_version         = "8.0.28"
@@ -311,4 +313,58 @@ resource "aws_db_subnet_group" "default" {
 output "lb_dns_name" {
   description = "The DNS name of the load balancer"
   value       = aws_lb.external-elb.dns_name
+}
+
+resource "aws_flow_log" "my-vpc" {
+  vpc_id          = "${aws_vpc.my-vpc.id}"
+  iam_role_arn    = "<iam_role_arn>"
+  log_destination = "${aws_s3_bucket.my-vpc.arn}"
+  traffic_type    = "ALL"
+
+  tags = {
+    GeneratedBy      = "Accurics"
+    ParentResourceId = "aws_vpc.my-vpc"
+  }
+}
+resource "aws_s3_bucket" "my-vpc" {
+  bucket        = "my-vpc_flow_log_s3_bucket"
+  acl           = "private"
+  force_destroy = true
+
+  versioning {
+    enabled    = true
+    mfa_delete = true
+  }
+
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
+}
+resource "aws_s3_bucket_policy" "my-vpc" {
+  bucket = "${aws_s3_bucket.my-vpc.id}"
+
+  policy = <<POLICY
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "my-vpc-restrict-access-to-users-or-roles",
+      "Effect": "Allow",
+      "Principal": [
+        {
+          "AWS": [
+            <principal_arn>
+          ]
+        }
+      ],
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::${aws_s3_bucket.my-vpc.id}/*"
+    }
+  ]
+}
+POLICY
 }
